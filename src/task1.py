@@ -5,7 +5,7 @@ import rospy
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
 from tf.transformations import euler_from_quaternion
-from math import sqrt, pow, pi
+from math import pi
 
 class Publisher():
 
@@ -30,31 +30,18 @@ class Publisher():
             self.x0 = self.x
             self.y0 = self.y
             self.theta_z0 = self.theta_z
+
     
     def __init__(self):
         self.node_name = "figure 8"
-
         self.startup = True
-        self.turn = False
-
         self.pub = rospy.Publisher('cmd_vel', Twist, queue_size=10)
         self.sub = rospy.Subscriber('odom', Odometry, self.callback_function)
         rospy.init_node(self.node_name, anonymous=True)
-        self.rate = rospy.Rate(10) # hz
-
-        self.x = 0.0
-        self.y = 0.0
-        self.theta_z = 0.0
-        self.x0 = 0.0
-        self.y0 = 0.0
-        self.theta_z0 = 0.0
-
+        self.rate = rospy.Rate(1) # hz
         self.vel = Twist()
-
-                
         self.ctrl_c = False
         rospy.on_shutdown(self.shutdownhook) 
-        
         rospy.loginfo(f"The '{self.node_name}' node is active...")
 
     def shutdownhook(self):
@@ -68,20 +55,36 @@ class Publisher():
         print(f"current odometry: x = {self.x:.3f}, y = {self.y:.3f}, theta_z = {self.theta_z:.3f}")
 
     def main_loop(self):
+        print("THIS IS THE START:", self.theta_z0)
+        path_rad = 0.5
+        is_past_halfway = False
+        status = "First Loop"
         while not self.ctrl_c:
             #publisher_message = f"rospy time is: {rospy.get_time()}"
-            path_rad = 1 # m
-            lin_vel = 0.2 # m/s
+            # m
+            lin_vel = pi/30 # m/s
 
             # v = r * w
-            self.vel.linear.x = lin_vel # m/s (v)
-            self.vel.angular.z = -(lin_vel / path_rad) # rad/s (w)
-
-            if abs(self.theta_z0 - self.theta_z) >= 2 * pi:
-                self.turn = False
-                self.vel.linear.x = lin_vel # m/s (v)
-                self.vel.angular.z = lin_vel / path_rad # rad/s (w)
             
+            self.vel.linear.x = lin_vel # m/s (v)
+            self.vel.angular.z = lin_vel / path_rad # rad/s (w)
+            #-1.569
+            if not is_past_halfway:
+                if self.theta_z > (((self.theta_z0 + pi)) - 0.1):
+                    is_past_halfway = True
+
+            if is_past_halfway and status == "First Loop":
+                if (self.theta_z >= self.theta_z0 - 0.3 and self.theta_z <= self.theta_z0+0.3):
+                    path_rad = -0.5
+                    status = "Second Loop"
+                    is_past_halfway = False
+
+            if is_past_halfway and status == "Second Loop":
+                if (self.theta_z >= self.theta_z0 - 0.13 and self.theta_z <= self.theta_z0+0.13):
+                    self.vel.linear.x = 0
+                    self.vel.angular.z = 0
+                    exit(0)
+            #stop robot
             self.pub.publish(self.vel)
             self.print_stuff(status)
             self.rate.sleep()
