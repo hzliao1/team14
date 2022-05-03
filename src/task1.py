@@ -25,15 +25,15 @@ class Publisher():
         self.y = pos_y
         self.theta_z = yaw 
 
+        #initialising and storing starting odom readings
         if self.startup:
             self.startup = False
             self.x0 = self.x
             self.y0 = self.y
             self.theta_z0 = self.theta_z
-
     
     def __init__(self):
-        self.node_name = "figure 8"
+        self.node_name = "figure_8"
         self.startup = True
         self.pub = rospy.Publisher('cmd_vel', Twist, queue_size=10)
         self.sub = rospy.Subscriber('odom', Odometry, self.callback_function)
@@ -49,44 +49,51 @@ class Publisher():
         self.pub.publish(Twist())
         self.ctrl_c = True
 
-    def print_stuff(self, a_message):
+    def print_data(self, a_message):
+        #formats data and prints to console
         print(a_message)
         print(f"current velocity: lin.x = {self.vel.linear.x:.1f}, ang.z = {self.vel.angular.z:.1f}")
-        print(f"current odometry: x = {self.x:.3f}, y = {self.y:.3f}, theta_z = {self.theta_z:.3f}")
+        print(f"current odometry: x = {self.x:.2f}, y = {self.y:.2f}, theta_z = {(self.theta_z*(180/pi)):.1f}")
 
     def main_loop(self):
-        print("THIS IS THE START:", self.theta_z0)
+        #output of initial data
+        print(f"Initial odometry: x={self.x:.2f}, y = {self.y:.2f}, theta_z = {(self.theta_z*(180/pi)):.1f}")
+        #initialising flags
         path_rad = 0.5
         is_past_halfway = False
         status = "First Loop"
+        #start of main loop
         while not self.ctrl_c:
-            #publisher_message = f"rospy time is: {rospy.get_time()}"
-            # m
+            #setting the speed
             lin_vel = pi/30 # m/s
 
-            # v = r * w
-            
+            #setting linear and angular velocities
             self.vel.linear.x = lin_vel # m/s (v)
             self.vel.angular.z = lin_vel / path_rad # rad/s (w)
-            #-1.569
+
+            #checks to see if robot has met halfway point
             if not is_past_halfway:
                 if self.theta_z > (((self.theta_z0 + pi)) - 0.1):
                     is_past_halfway = True
-
+            #if past halfway on first loop, start checking if nearing origin
             if is_past_halfway and status == "First Loop":
-                if (self.theta_z >= self.theta_z0 - 0.3 and self.theta_z <= self.theta_z0+0.3):
+                if (self.theta_z >= self.theta_z0 - 0.4 and self.theta_z <= self.theta_z0+0.4):
                     path_rad = -0.5
                     status = "Second Loop"
                     is_past_halfway = False
 
+            #if past halfway on second loop, start checking if nearing origin
             if is_past_halfway and status == "Second Loop":
                 if (self.theta_z >= self.theta_z0 - 0.13 and self.theta_z <= self.theta_z0+0.13):
+                    #stops robot based on position to origin
                     self.vel.linear.x = 0
                     self.vel.angular.z = 0
-                    exit(0)
-            #stop robot
+                    rospy.signal_shutdown("We are done here!")
+                    break
+                    #exit(0)
+            #output of odom data
             self.pub.publish(self.vel)
-            self.print_stuff(status)
+            self.print_data(status)
             self.rate.sleep()
 
 if __name__ == '__main__':
