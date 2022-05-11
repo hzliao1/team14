@@ -29,9 +29,9 @@ class colour_search(object):
 
 
         self.robot_controller = Tb3Move()
-        self.turn_vel_fast = 0
+        self.turn_vel_fast = -0.5
         self.turn_vel_slow = -0.1
-        self.robot_controller.set_move_cmd(0.0, self.turn_vel_fast)
+        self.robot_controller.set_move_cmd(0.0, 0.0)
 
         self.move_rate = "" # fast, slow or stop
         self.stop_counter = 0
@@ -122,11 +122,16 @@ class colour_search(object):
 
     def main(self):
         searchInitiated = False
+        searchColour = ''
         while not self.ctrl_c:
             
-            self.move_rate = "stop"
-            # detect colour
-            searchColour = ''
+            # self.move_rate = "stop"
+            
+            # detect beacon colour
+
+            if searchColour == '':
+                self.robot_controller.set_move_cmd(0.0, self.turn_vel_fast)      
+
             searchBlue = np.sum(self.blue_mask)
             if searchBlue > 0:
                 searchColour = 'Blue'
@@ -148,6 +153,7 @@ class colour_search(object):
 
             if not searchInitiated and searchColour != '':
                 print('SEARCH INITIATED: The target beacon colour is ' + searchColour)
+                self.robot_controller.set_move_cmd(0.0, 0.0)
                 searchInitiated = True
 
             # if self.stop_counter > 0:
