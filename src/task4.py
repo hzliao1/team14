@@ -125,7 +125,6 @@ class colour_search(object):
         while not self.ctrl_c:
             
             self.move_rate = "stop"
-
             # detect colour
             searchColour = ''
             searchBlue = np.sum(self.blue_mask)
