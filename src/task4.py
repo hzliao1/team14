@@ -8,7 +8,7 @@ import cv2
 from cv_bridge import CvBridge, CvBridgeError
 
 # Import all the necessary ROS message types:
-from sensor_msgs.msg import Image
+from sensor_msgs.msg import Image, LaserScan
 
 # Import the tb3 modules (which needs to exist within the "week6_vision" package)
 from tb3 import Tb3Move
@@ -21,8 +21,8 @@ class colour_search(object):
         node_name = "turn_and_face"
         rospy.init_node(node_name)
 
-        self.camera_subscriber = rospy.Subscriber("/camera/rgb/image_raw",
-            Image, self.camera_callback)
+        self.camera_subscriber = rospy.Subscriber("/camera/rgb/image_raw", Image, self.camera_callback)
+        self.lidar_subscriber = rospy.Subscriber('/scan', LaserScan, self.callback_lidar)
         self.cvbridge_interface = CvBridge()
 
         self.start_colour = ""
@@ -119,42 +119,67 @@ class colour_search(object):
         
         cv2.imshow("cropped image", crop_img)
         cv2.waitKey(1)
+    
+    def lidar_callback(self, lidar_data): 
+        """
+        Obtain a subset of the LaserScan.ranges array corresponding to a +/-10 degree arc in front of it.
+        Convert this subset to a numpy array to allow for more advanced processing.
+        """
+
+        left_arc = lidar_data.ranges[0:10]
+        right_arc = lidar_data.ranges[-10:]
+        front_arc = np.array(left_arc + right_arc)
+        # find the miniumum object distance within the frontal laserscan arc:
+        self.object_distance = front_arc.min()
 
     def main(self):
         searchInitiated = False
         searchColour = ''
+        beaconTarget = 0 # this will be for once the beacon colour is detected, we can use this var to store the mask we want
         while not self.ctrl_c:
             
             # self.move_rate = "stop"
-            
+
             # detect beacon colour
 
             if searchColour == '':
                 self.robot_controller.set_move_cmd(0.0, self.turn_vel_fast)      
 
-            searchBlue = np.sum(self.blue_mask)
-            if searchBlue > 0:
-                searchColour = 'Blue'
-            searchRed = np.sum(self.red_mask)
-            if searchRed > 0:
-                searchColour = 'Red'
-            searchGreen = np.sum(self.green_mask)
-            if searchGreen > 0:
-                searchColour = 'Green'
-            searchTurquoise = np.sum(self.turquoise_mask)
-            if searchTurquoise > 0:
-                searchColour = 'Turquoise'
-            searchYellow = np.sum(self.yellow_mask)
-            if searchYellow > 0:
-                searchColour = 'Yellow'
-            searchPurple = np.sum(self.purple_mask)
-            if searchPurple > 0:
-                searchColour = 'Purple'
+                searchBlue = np.sum(self.blue_mask)
+                if searchBlue > 0:
+                    searchColour = 'Blue'
+                    beaconTarget = searchBlue
+                searchRed = np.sum(self.red_mask)
+                if searchRed > 0:
+                    searchColour = 'Red'
+                    beaconTarget = searchRed
+                searchGreen = np.sum(self.green_mask)
+                if searchGreen > 0:
+                    searchColour = 'Green'
+                    beaconTarget = searchGreen
+                searchTurquoise = np.sum(self.turquoise_mask)
+                if searchTurquoise > 0:
+                    searchColour = 'Turquoise'
+                    beaconTarget = searchTurquoise
+                searchYellow = np.sum(self.yellow_mask)
+                if searchYellow > 0:
+                    searchColour = 'Yellow'
+                    beaconTarget = searchYellow
+                searchPurple = np.sum(self.purple_mask)
+                if searchPurple > 0:
+                    searchColour = 'Purple'
+                    beaconTarget = searchPurple
+            
 
             if not searchInitiated and searchColour != '':
-                print('SEARCH INITIATED: The target beacon colour is ' + searchColour)
-                self.robot_controller.set_move_cmd(0.0, 0.0)
+                print('SEARCH INITIATED: The target beacon colour is ' + searchColour + '.')
+                #self.robot_controller.set_move_cmd(0.0, 0.0)
                 searchInitiated = True
+
+            # search for beacon of colour 'searchColour'
+            
+
+            # initiate beaconing
 
             # if self.stop_counter > 0:
             #     self.stop_counter -= 1
