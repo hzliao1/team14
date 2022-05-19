@@ -14,24 +14,10 @@ from tf.transformations import euler_from_quaternion
 from tb3 import Tb3LaserScan, Tb3Move, Tb3Odometry
 
 def movingForward():
-    # scan_msg = rospy.wait_for_message("/scan", LaserScan)
-    # frontPoint = scan_msg.ranges[1]
-    # if frontPoint < 0.5:
-    #     print('stopped moving forward')
-    #     robot_controller.set_move_cmd(0, 0)  
-    #     robot_controller.publish()
-    #     return
-    # else:
-    #     print('Is moving forward')
-    #     while frontPoint > 0.3:
-    #         scan_msg = rospy.wait_for_message("/scan", LaserScan)
-    #         frontPoint = scan_msg.ranges[1]
-    #         robot_controller.set_move_cmd(0.25, 0)  
-    #         robot_controller.publish()
     print('Is moving forward')
     scan_msg = rospy.wait_for_message("/scan", LaserScan)
     frontPoint = scan_msg.ranges[1]
-    while frontPoint > 0.4:
+    while frontPoint > 0.45:
             scan_msg = rospy.wait_for_message("/scan", LaserScan)
             frontPoint = scan_msg.ranges[1]
             robot_controller.set_move_cmd(0.25, 0)  
@@ -66,19 +52,6 @@ def turnCW():
     robot_controller.set_move_cmd(0, 0)  
     robot_controller.publish()
 
-    # while(front > 0.1):
-    #     print('forward after turning')
-    #     scan_msg = rospy.wait_for_message("/scan", LaserScan)
-    #     front = scan_msg.ranges[1]
-    #     robot_controller.set_move_cmd(0.2, 0)
-    #     robot_controller.publish()
-    #     if front < 0.5:
-    #         break
-    # print('stop after turn')
-    # robot_controller.set_move_cmd(0, 0)  
-    # robot_controller.publish()
-    # return
-
 def turnCCW():
     theta_z0 = robot_odometry.yaw
     print('Turning CCW')
@@ -106,7 +79,7 @@ def turnCCW():
 
 def escapeMaze():
     #initialize the node   
-    rospy.init_node('robot_cleaner', anonymous=True)
+    rospy.init_node('robot_maze', anonymous=True)
     global robot_controller
     robot_controller = Tb3Move()
     global robot_odometry
@@ -128,9 +101,7 @@ def escapeMaze():
         right = scan_msg.ranges[270]  
         top_right = scan_msg.ranges[315]
         global executingTurn
-        # executingTurn = False
-        # if executingTurn == False:
-        if right < 0.4:
+        if right < 0.45:
             no_right_wall = False
             print('Right wall detected')
         else:
