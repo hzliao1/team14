@@ -261,10 +261,10 @@ class colour_search(object):
                     self.robot_controller.publish()
                     self.distance = sqrt(pow(self.posx0 - self.robot_odometry.posx, 2) + pow(self.posy0 - self.robot_odometry.posy, 2))
                 
-                if self.robot_lidar.closest_object_position > 0 and self.robot_lidar.back_min > 0.3 and self.turn_right:
+                if self.robot_lidar.closest_object_position > 0 and self.robot_lidar.back_min > 0.3:
                     self.robot_controller.set_move_cmd(0.0, -1.2)
                     self.robot_controller.publish()
-                elif self.robot_lidar.closest_object_position < 0 and self.robot_lidar.back_min > 0.3 and self.turn_left:
+                elif self.robot_lidar.closest_object_position < 0 and self.robot_lidar.back_min > 0.3:
                     self.robot_controller.set_move_cmd(0.0, 1.2)
                     self.robot_controller.publish()
                 elif self.robot_lidar.closest_object_position == 0:
@@ -274,8 +274,8 @@ class colour_search(object):
                     else:
                         self.robot_controller.set_move_cmd(0.0, 1.2)
                         self.robot_controller.publish()
-                                         
-                if findThis == beaconColor and self.distance > 1:
+                            
+                if findThis > 0 and self.distance > 1:
                     print('TARGET DETECTED: Beaconing Initiated.')
                     self.robot_controller.set_move_cmd(0, 0)
                     self.robot_controller.publish()
@@ -284,7 +284,7 @@ class colour_search(object):
                         
             # initiate beaconing
             while beaconingInitiated:
-                if self.robot_lidar.min_distance < 0.15:
+                if self.robot_lidar.min_distance < 0.2:
                     self.robot_controller.set_move_cmd(0.0, 0.0)
                     self.robot_controller.publish()
                     print("BEACONING COMPLETE: The robot has now stopped.")
