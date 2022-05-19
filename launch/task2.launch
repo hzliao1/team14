@@ -1,6 +1,6 @@
 <launch>
-  <node pkg="team14" type="task2.client" name="search_action_client"  output="screen">
+  <node pkg="team14" type="task2_client.py" name="search_action_client"  output="screen">
   </node>
-  <node pkg="team14" type="task2.server" name="search_action_server"  output="screen">
+  <node pkg="team14" type="task2_server.py" name="search_action_server"  output="screen">
   </node>
 </launch>
