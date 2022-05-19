@@ -1,11 +1,15 @@
 #! /usr/bin/python3
 
 # Import the core Python modules for ROS and to implement ROS Actions:
-from asyncore import loop
-from random import random
-from re import A
+from cmath import pi
+from operator import le
+from turtle import right
+
+from defer import return_value
 import rospy
 import actionlib
+
+from sensor_msgs.msg import LaserScan
 
 # Import all the necessary ROS message types:
 from com2009_msgs.msg import SearchFeedback, SearchResult, SearchAction, SearchGoal
@@ -14,7 +18,7 @@ from com2009_msgs.msg import SearchFeedback, SearchResult, SearchAction, SearchG
 from tb4 import Tb3Move, Tb3Odometry, Tb3LaserScan
 
 # Import some other useful Python Modules
-from math import pi, sqrt, pow
+import math
 import numpy as np
 
 class SearchActionServer(object):
@@ -29,31 +33,89 @@ class SearchActionServer(object):
         self.vel_controller = Tb3Move()
         self.tb3_odom = Tb3Odometry()
         self.tb3_lidar = Tb3LaserScan()
-    
-    def scan_callback(self, scan_data):
-        left_arc = scan_data.ranges[0:21]
-        right_arc = scan_data.ranges[-20:]
-        front_arc = np.array(left_arc[::-1] + right_arc[::-1])
-        self.min_distance = front_arc.min()
-        self.object_angle = self.arc_angles[np.argmin(front_arc)]
 
+    def cosine_law(self):
+        scan_msg = rospy.wait_for_message("/scan", LaserScan)
+        right = scan_msg.ranges[-30]  
+        front = scan_msg.ranges[0]
 
+        m = round(math.sqrt(pow(right, 2) + pow(front, 2) - (2 * (right) * (front) * math.cos(30)), 2),2)
+
+        angular = math.acos((front - right * math.cos(30)) / m)
+
+        angle = 180 * angular / pi
+
+        return angle, angular
 
     def turn_left(self):
-        left_distance = self.tb3_lidar.left_min
-        right_distance = self.tb3_lidar.right_min
-        if left_distance > right_distance:
-            return True
+
+        angular_speed = 1.2
+
+        w = self.cosine_law()
+        relative_angle = w[0]  
+
+        self.vel_controller.set_move_cmd(0.0, angular_speed)
+        print('Turning left')
+        t0 = rospy.get_time
+
+        while(current_angle < relative_angle):
+            self.vel_controller.publish()#Publish the velocity  
+            #Take actual time to vel calculation
+            t1 = rospy.Time.now().to_sec()
+            current_angle = angular_speed*(t1-t0)#calculates distance
+
+        return        
 
 
     def turn_right(self):
-        left_distance = self.tb3_lidar.left_min
-        right_distance = self.tb3_lidar.right_min
-        if left_distance < right_distance:
-            return True
+
+        angular_speed = 1.2
+
+        w = self.cosine_law()
+        relative_angle = w[0]  
+
+        self.vel_controller.set_move_cmd(0.0, -angular_speed)
+        print('Turning right')
+        t0 = rospy.get_time
+
+        while(current_angle < relative_angle):
+
+            self.vel_controller.publish()#Publish the velocity  
+
+            #Take actual time to vel calculation
+            t1 = rospy.Time.now().to_sec()
+
+            current_angle = angular_speed*(t1-t0)#calculates distance
+
+        return    
+
+    def turn_back(self):
+        angular_speed = 1.2
+
+        self.vel_controller.set_move_cmd(0.0, -angular_speed)
+        print('Turning back')
+
+        loop_initial_time = rospy.get_time()
+        turn_time = pi / angular_speed
+
+        while rospy.get_time() < loop_initial_time + turn_time:
+            self.vel_controller.publish()
+
+
+
+        return    
+
+
+            
+
 
     
     def action_server_launcher(self, goal: SearchGoal):
+        scan_msg = rospy.wait_for_message("/scan", LaserScan)
+        right = scan_msg.ranges[-90]  
+        left = scan_msg.ranges[90]
+        front = scan_msg.ranges[0]
+
         r = rospy.Rate(10)
 
         success = True
@@ -84,38 +146,41 @@ class SearchActionServer(object):
         self.vel_controller.set_move_cmd(goal.fwd_velocity, 0.0)
         
         while self.tb3_lidar.min_distance > goal.approach_distance:
+        
+
             self.vel_controller.publish()
-            #check if there has been a request to cancel the action mid-way through:
+            # check if there has been a request to cancel the action mid-way through:
             if self.actionserver.is_preempt_requested():
-                rospy.loginfo("Cancelling the camera sweep.")
+                rospy.loginfo("Cancelling .....")
                 self.actionserver.set_preempted()
                 # stop the robot:
-                self.vel_controller.stop()  
+                self.vel_controller.stop()
                 success = False
                 # exit the loop:
                 break
             
-            self.distance = sqrt(pow(self.posx0 - self.tb3_odom.posx, 2) + pow(self.posy0 - self.tb3_odom.posy, 2))
+            self.distance = math.sqrt(pow(self.posx0 - self.tb3_odom.posx, 2) + pow(self.posy0 - self.tb3_odom.posy, 2))
             # populate the feedback message and publish it:
             self.feedback.current_distance_travelled = self.distance
             self.actionserver.publish_feedback(self.feedback)
 
-
         if self.tb3_lidar.closest_object_position > 0 and self.tb3_lidar.back_min > 0.3 and self.turn_right:
-            self.vel_controller.set_move_cmd(0.0, -1.3)
+            self.vel_controller.set_move_cmd(0.0, -1.2)
             self.vel_controller.publish()
         elif self.tb3_lidar.closest_object_position < 0 and self.tb3_lidar.back_min > 0.3 and self.turn_left:
-            self.vel_controller.set_move_cmd(0.0, 1.3)
+            self.vel_controller.set_move_cmd(0.0, 1.2)
             self.vel_controller.publish()
         elif self.tb3_lidar.closest_object_position == 0:
-            if self.turn_right and self.tb3_lidar.back_min > 0.3: 
-                self.vel_controller.set_move_cmd(0.0, -1.3)
+            if self.turn_right: 
+                self.vel_controller.set_move_cmd(0.0, -1.2)
                 self.vel_controller.publish()
             else:
-                self.vel_controller.set_move_cmd(0.0, 1.3)
+                self.vel_controller.set_move_cmd(0.0, 1.2)
                 self.vel_controller.publish()  
-
-
+                 
+    
+            
+            
 
 
         if success:
@@ -125,7 +190,7 @@ class SearchActionServer(object):
             self.result.closest_object_angle = self.tb3_lidar.closest_object_position
 
             self.actionserver.set_succeeded(self.result)
-            # self.vel_controller.stop()
+            self.vel_controller.stop()
             
 if __name__ == '__main__':
     rospy.init_node("search_action_server")
