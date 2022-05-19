@@ -48,14 +48,6 @@ class Tb3Odometry(object):
 
 class Tb3LaserScan(object):
     def laserscan_cb(self, scan_data):
-        
-        # 正前方
-        front_dis = scan_data.ranges[0]
-        left_dis = scan_data.ranges[90]
-        left_sd = np.array(scan_data.ranges[30])
-        right_sd = np.array(scan_data.ranges[-30])
-        right_dis = scan_data.ranges[270]
-
         left_arc = scan_data.ranges[0:21]
         right_arc = scan_data.ranges[-20:]
         front_arc = np.array(left_arc[::-1] + right_arc[::-1])
