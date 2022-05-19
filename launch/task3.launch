@@ -1,4 +1,4 @@
 <launch>
-  <node pkg="team14" type="task3.py" name="pub_node"  output="screen">
+  <node pkg="team14" type="task3.py" name="maze"  output="screen">
   </node>
 </launch>
