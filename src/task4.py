@@ -14,8 +14,8 @@ from sensor_msgs.msg import Image, LaserScan
 from com2009_msgs.msg import SearchFeedback, SearchResult, SearchAction, SearchGoal
 
 # Import the tb3 modules (which needs to exist within the "week6_vision" package)
-from tb3 import Tb3Move, Tb3LaserScan, Tb3Odometry
-# from tb4 import Tb3LaserScan, Tb3Odometry
+from tb3 import Tb3Move #, Tb3LaserScan, Tb3Odometry
+from tb4 import Tb3LaserScan, Tb3Odometry
 import numpy as np
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
@@ -133,14 +133,13 @@ class colour_search(object):
         self.turquoise_mask = cv2.inRange(hsv_img, self.turquoise_lower, self.turquoise_upper)
         self.yellow_mask = cv2.inRange(hsv_img, self.yellow_lower, self.yellow_upper)
         self.purple_mask = cv2.inRange(hsv_img, self.purple_lower, self.purple_upper)
-            
         # self.m00 = m["m00"]
         # self.cy = m["m10"] / (m["m00"] + 1e-5)
 
         # if self.m00 > self.m00_min:
         #     cv2.circle(crop_img, (int(self.cy), 200), 10, (0, 0, 255), 2)
         
-        cv2.imshow("cropped image", crop_img)
+        # cv2.imshow("cropped image", crop_img)
         cv2.waitKey(1)
 
     def odom_callback(self, odom_data):
@@ -167,41 +166,41 @@ class colour_search(object):
             self.theta_z0 = self.theta_z
     
     def turn_left(self):
-        left_distance = self.robot_lidar.left_arc.min()
-        right_distance = self.robot_lidar.right_arc.min()
+        left_distance = self.robot_lidar.left_min
+        right_distance = self.robot_lidar.right_min
         if left_distance > right_distance:
             return True
 
 
     def turn_right(self):
-        left_distance = self.robot_lidar.left_arc.min()
-        right_distance = self.robot_lidar.right_arc.min()
+        left_distance = self.robot_lidar.left_min
+        right_distance = self.robot_lidar.right_min
         if left_distance < right_distance:
             return True
 
     def main(self):
-        searchInitiated = False
-        beaconingInitiated = False
+        searchInitiated = False # flag for printing colour detected message once
+        beaconingInitiated = False # flag for beaconing sequence
         searchColour = ''
         beaconTarget = 0 # will store current value of the mask we are searching for
         beaconColor = 0 # will store value of mask that needs to be found
         searching = False # flag for searching for beacon
-        # beaconFound = True # flag for once beacon is found
-        beaconingDone = True # flag for beaconing sequence
-        detectingColor = True
-        pastHalfway = False
+        detectingColor = True # flag for detecting initial colour
         startTime = time.time()
         while not self.ctrl_c:
             # detect beacon colour
             while detectingColor:
                 currentTime = time.time()
                 if int(currentTime - startTime) > 22:
-                    detectingColor = False
+                    self.robot_controller.set_move_cmd(0.25, 0)
+                    self.robot_controller.publish()
+                    if int(currentTime - startTime) > 24:
+                        searching = True
+                        detectingColor = False
                 else:
                     self.robot_controller.set_move_cmd(0.0, self.turn_vel_slow)
                     self.robot_controller.publish()
                 
-                # if self.theta_z <= (((self.theta_z0 - pi)) - 0.1):
                 if int(currentTime - startTime) > 9 and int(currentTime - startTime) < 11:
                     pastHalfway = True
                     if searchColour == '':
@@ -209,55 +208,63 @@ class colour_search(object):
                         searchBlue = np.sum(self.blue_mask)
                         if searchBlue > 0:
                             searchColour = 'Blue'
-                            beaconTarget = self.blue_mask
                             beaconColor = searchBlue
                         searchRed = np.sum(self.red_mask)
                         if searchRed > 0:
                             searchColour = 'Red'
-                            beaconTarget = self.red_mask
                             beaconColor = searchRed
                         searchGreen = np.sum(self.green_mask)
                         if searchGreen > 0:
                             searchColour = 'Green'
-                            beaconTarget = self.green_mask
                             beaconColor = searchGreen
                         searchTurquoise = np.sum(self.turquoise_mask)
                         if searchTurquoise > 0:
                             searchColour = 'Turquoise'
-                            beaconTarget = self.turquoise_mask
                             beaconColor = searchTurquoise
                         searchYellow = np.sum(self.yellow_mask)
                         if searchYellow > 0:
                             searchColour = 'Yellow'
-                            beaconTarget = self.yellow_mask
                             beaconColor = searchYellow
                         searchPurple = np.sum(self.purple_mask)
                         if searchPurple > 0:
                             searchColour = 'Purple'
-                            beaconTarget = self.purple_mask
                             beaconColor = searchPurple
             
                 if not searchInitiated and searchColour != '':
                     print('SEARCH INITIATED: The target beacon colour is ' + searchColour + '.')
-                    #self.robot_controller.set_move_cmd(0.0, 0.0)
                     searchInitiated = True
-                    searching = True
-                    # beaconFound = False
-                    # detectingColor = False
-
-            self.robot_controller.set_move_cmd(0.0, 0.0)
-
+            
             # search for beacon of colour 'searchColour'
             while searching:
+            
+                if searchColour == 'Blue':
+                        beaconTarget = self.blue_mask
+                if searchColour == 'Red':
+                        beaconTarget = self.red_mask
+                if searchColour == 'Green':
+                        beaconTarget = self.green_mask
+                if searchColour == 'Turquoise':
+                        beaconTarget = self.turquoise_mask
+                if searchColour == 'Yellow':
+                        beaconTarget = self.yellow_mask
+                if searchColour == 'Purple':
+                        beaconTarget = self.purple_mask
+
+                findThis = np.sum(beaconTarget)
+                
                 self.posx0 = self.robot_odometry.posx
                 self.posy0 = self.robot_odometry.posy
+                    
+                self.robot_controller.set_move_cmd(0.25, 0.0)
+
+                while self.robot_lidar.min_distance > 0.5:
+                    self.robot_controller.publish()
+                    self.distance = sqrt(pow(self.posx0 - self.robot_odometry.posx, 2) + pow(self.posy0 - self.robot_odometry.posy, 2))
                 
-                self.distance = sqrt(pow(self.posx0 - self.robot_odometry.posx, 2) + pow(self.posy0 - self.robot_odometry.posy, 2))
-                
-                if self.robot_lidar.closest_object_position > 0 and self.turn_right:
+                if self.robot_lidar.closest_object_position > 0 and self.robot_lidar.back_min > 0.3:
                     self.robot_controller.set_move_cmd(0.0, -1.2)
                     self.robot_controller.publish()
-                elif self.robot_lidar.closest_object_position < 0 and self.turn_left:
+                elif self.robot_lidar.closest_object_position < 0 and self.robot_lidar.back_min > 0.3:
                     self.robot_controller.set_move_cmd(0.0, 1.2)
                     self.robot_controller.publish()
                 elif self.robot_lidar.closest_object_position == 0:
@@ -267,70 +274,25 @@ class colour_search(object):
                     else:
                         self.robot_controller.set_move_cmd(0.0, 1.2)
                         self.robot_controller.publish()
-                else:
-                    self.robot_controller.set_move_cmd(0.25, 0.0)
-                    self.robot_controller.publish()
-                         
-                if np.sum(beaconTarget) == beaconColor and int(currentTime - startTime) > 20:
+                            
+                if findThis > 0 and self.distance > 1:
                     print('TARGET DETECTED: Beaconing Initiated.')
                     self.robot_controller.set_move_cmd(0, 0)
                     self.robot_controller.publish()
                     searching = False
                     beaconingInitiated = True
-
                         
-                # initiate beaconing
-                # while not beaconingDone:
-                #     while self.robot_lidar.min_distance > goal.approach_distance:
-                #         self.robot_controller.set_move_cmd(0.25, 0)
-                #         self.robot_controller.publish()
-                #     self.robot_controller.set_move_cmd(0, 0)
-                #     self.robot_controller.publish()
-                #     print("BEACONING COMPLETE: The robot has now stopped.")
-                #     self.result.total_distance_travelled = self.distance
-                #     self.result.closest_object_distance = self.robot_lidar.min_distance
-                #     self.result.closest_object_angle = self.robot_lidar.closest_object_position
-                #     beaconingDone = True
+            # initiate beaconing
+            while beaconingInitiated:
+                if self.robot_lidar.min_distance < 0.2:
+                    self.robot_controller.set_move_cmd(0.0, 0.0)
+                    self.robot_controller.publish()
+                    print("BEACONING COMPLETE: The robot has now stopped.")
+                    beaconingInitiated = False
+                self.robot_controller.set_move_cmd(0.1, 0)
+                self.robot_controller.publish()
 
-                # self.actionserver.set_succeeded(self.result)
-                # searchEnd = True
-
-
-
-
-
-            # if beaconTarget > 0 and not beaconingInitiated: 
-            #     print('TARGET DETECTED: Beaconing Initiated.')
-            #     beaconingInitiated = True
-
-
-            # if self.stop_counter > 0:
-            #     self.stop_counter -= 1
-
-            # if self.m00 > self.m00_min:
-            #     # blob detected
-            #     if self.cy >= 560-100 and self.cy <= 560+100:
-            #         if self.move_rate == "slow":
-            #             self.move_rate = "stop"
-            #             self.stop_counter = 20
-            #     else:
-            #         self.move_rate = "slow"
-            # else:
-            #     self.move_rate = "fast"
-                
-            # if self.move_rate == "fast":
-            #     print(f"MOVING FAST: I can't see anything at the moment (blob size = {self.m00:.0f}), scanning the area...")
-            #     self.robot_controller.set_move_cmd(0.0, self.turn_vel_fast)
-            # elif self.move_rate == "slow":
-            #     print(f"MOVING SLOW: A blob of colour of size {self.m00:.0f} pixels is in view at y-position: {self.cy:.0f} pixels.")
-            #     self.robot_controller.set_move_cmd(0.0, self.turn_vel_slow)
-            # elif self.move_rate == "stop" and self.stop_counter > 0:
-            #     print(f"STOPPED: The blob of colour is now dead-ahead at y-position {self.cy:.0f} pixels... Counting down: {self.stop_counter}")
-            #     self.robot_controller.set_move_cmd(0.0, 0.0)
-            # else:
-            #     print(f"MOVING SLOW: A blob of colour of size {self.m00:.0f} pixels is in view at y-position: {self.cy:.0f} pixels.")
-            #     self.robot_controller.set_move_cmd(0.0, self.turn_vel_slow)
-
+            self.robot_controller.set_move_cmd(0.0, 0.0)
             self.robot_controller.publish()
             self.rate.sleep()
             

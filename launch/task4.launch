@@ -1,6 +1,4 @@
 <launch>
-  <node pkg="team14" type="task4.py" name="search_server"  output="screen">
-  </node>
-  <node pkg="team14" type="task4_client.py" name="search_client"  output="screen">
+  <node pkg="team14" type="task4.py" name="beaconing"  output="screen">
   </node>
 </launch>
