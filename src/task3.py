@@ -17,7 +17,7 @@ def movingForward():
     print('Is moving forward')
     scan_msg = rospy.wait_for_message("/scan", LaserScan)
     frontPoint = scan_msg.ranges[1]
-    while frontPoint > 0.45:
+    while frontPoint > 0.35:
             scan_msg = rospy.wait_for_message("/scan", LaserScan)
             frontPoint = scan_msg.ranges[1]
             robot_controller.set_move_cmd(0.25, 0)  
@@ -38,12 +38,12 @@ def turnCW():
             robot_controller.publish()
             turning = False
         else:
-            robot_controller.set_move_cmd(0, -0.2)
+            robot_controller.set_move_cmd(0, -0.3)
             robot_controller.publish()
     scan_msg = rospy.wait_for_message("/scan", LaserScan)
     frontPoint = scan_msg.ranges[1]
     print('forward after turn')
-    while frontPoint > 0.5:
+    while frontPoint > 0.35:
             scan_msg = rospy.wait_for_message("/scan", LaserScan)
             frontPoint = scan_msg.ranges[1]
             robot_controller.set_move_cmd(0.25, 0)  
@@ -63,12 +63,12 @@ def turnCCW():
             robot_controller.publish()
             turning = False
         else:
-            robot_controller.set_move_cmd(0, 0.2)
+            robot_controller.set_move_cmd(0, 0.3)
             robot_controller.publish()
     scan_msg = rospy.wait_for_message("/scan", LaserScan)
     frontPoint = scan_msg.ranges[1]
     print('forward after turn')
-    while frontPoint > 0.5:
+    while frontPoint > 0.35:
             scan_msg = rospy.wait_for_message("/scan", LaserScan)
             frontPoint = scan_msg.ranges[1]
             robot_controller.set_move_cmd(0.25, 0)  
@@ -101,13 +101,13 @@ def escapeMaze():
         right = scan_msg.ranges[270]  
         top_right = scan_msg.ranges[315]
         global executingTurn
-        if right < 0.45:
+        if right < 0.5:
             no_right_wall = False
             print('Right wall detected')
         else:
             no_right_wall = True
             print('Right wall not detected')
-        if frontPoint < 0.5:
+        if frontPoint < 0.35:
             no_front_wall = False
             print('Front wall detected')
         else:

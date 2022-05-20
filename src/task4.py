@@ -14,8 +14,8 @@ from sensor_msgs.msg import Image, LaserScan
 from com2009_msgs.msg import SearchFeedback, SearchResult, SearchAction, SearchGoal
 
 # Import the tb3 modules (which needs to exist within the "week6_vision" package)
-from tb3 import Tb3Move #, Tb3LaserScan, Tb3Odometry
-from tb4 import Tb3LaserScan, Tb3Odometry
+from tb3 import Tb3Move, Tb3LaserScan, Tb3Odometry
+# from tb4 import Tb3LaserScan, Tb3Odometry
 import numpy as np
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
@@ -139,7 +139,7 @@ class colour_search(object):
         # if self.m00 > self.m00_min:
         #     cv2.circle(crop_img, (int(self.cy), 200), 10, (0, 0, 255), 2)
         
-        # cv2.imshow("cropped image", crop_img)
+        cv2.imshow("cropped image", crop_img)
         cv2.waitKey(1)
 
     def odom_callback(self, odom_data):
@@ -185,23 +185,48 @@ class colour_search(object):
         beaconTarget = 0 # will store current value of the mask we are searching for
         beaconColor = 0 # will store value of mask that needs to be found
         searching = False # flag for searching for beacon
-        detectingColor = True # flag for detecting initial colour
+        detectingColor = False # flag for detecting initial colour
+        findPosition = True # flag for marking initial yaw
         startTime = time.time()
         while not self.ctrl_c:
+            while findPosition:
+                time.sleep(0.5)
+                initialPosition = self.robot_odometry.posx
+                initialYaw = self.robot_odometry.yaw
+                print(initialPosition)
+                if initialPosition > -1 and initialPosition < 1:
+                    startZone = 'A'
+                    print(startZone)
+                    detectingColor = True
+                    findPosition = False
+                    break
+                if initialPosition > -2 and initialPosition < -1:
+                    startZone = 'B'
+                    print(startZone)
+                    detectingColor = True
+                    findPosition = False
+                    break
+                if initialPosition > 1 and initialPosition < 3:
+                    startZone = 'C'
+                    print(startZone)
+                    detectingColor = True
+                    findPosition = False
+                    break
+    
             # detect beacon colour
             while detectingColor:
                 currentTime = time.time()
-                if int(currentTime - startTime) > 22:
-                    self.robot_controller.set_move_cmd(0.25, 0)
+                if (abs(initialYaw - self.robot_odometry.yaw) >= 359 or abs(initialYaw - self.robot_odometry.yaw) <= 1) and int(currentTime - startTime) > 5:
+                    self.robot_controller.set_move_cmd(0.0, 0.0)
                     self.robot_controller.publish()
-                    if int(currentTime - startTime) > 24:
-                        searching = True
-                        detectingColor = False
+                    time.sleep(0.25)
+                    searching = True
+                    detectingColor = False
                 else:
                     self.robot_controller.set_move_cmd(0.0, self.turn_vel_slow)
                     self.robot_controller.publish()
                 
-                if int(currentTime - startTime) > 9 and int(currentTime - startTime) < 11:
+                if abs(initialYaw - self.robot_odometry.yaw) >= 178 and abs(initialYaw - self.robot_odometry.yaw) <= 182:
                     pastHalfway = True
                     if searchColour == '':
                         
@@ -234,9 +259,12 @@ class colour_search(object):
                     print('SEARCH INITIATED: The target beacon colour is ' + searchColour + '.')
                     searchInitiated = True
             
+            self.posx0 = self.robot_odometry.posx
+            self.posy0 = self.robot_odometry.posy
+            self.theta_z0 = self.robot_odometry.yaw
+            
             # search for beacon of colour 'searchColour'
             while searching:
-            
                 if searchColour == 'Blue':
                         beaconTarget = self.blue_mask
                 if searchColour == 'Red':
@@ -249,48 +277,110 @@ class colour_search(object):
                         beaconTarget = self.yellow_mask
                 if searchColour == 'Purple':
                         beaconTarget = self.purple_mask
-
+                #beaconTarget = self.turquoise_mask # FOR TESTING
                 findThis = np.sum(beaconTarget)
+                #print(findThis)
+                self.distance = sqrt(pow(self.posx0 - self.robot_odometry.posx, 2) + pow(self.posy0 - self.robot_odometry.posy, 2))
+                # self.robot_controller.set_move_cmd(0.25, 0.0)
+                # while self.robot_lidar.min_distance > 0.5:
+                #     self.robot_controller.publish()
+                #     self.distance = sqrt(pow(self.posx0 - self.robot_odometry.posx, 2) + pow(self.posy0 - self.robot_odometry.posy, 2))
                 
-                self.posx0 = self.robot_odometry.posx
-                self.posy0 = self.robot_odometry.posy
-                    
-                self.robot_controller.set_move_cmd(0.25, 0.0)
+                # if self.robot_lidar.closest_object_position > 0 and self.robot_lidar.back_min > 0.3:
+                #     self.robot_controller.set_move_cmd(0.0, -1.2)
+                #     self.robot_controller.publish()
+                # elif self.robot_lidar.closest_object_position < 0 and self.robot_lidar.back_min > 0.3:
+                #     self.robot_controller.set_move_cmd(0.0, 1.2)
+                #     self.robot_controller.publish()
+                # elif self.robot_lidar.closest_object_position == 0:
+                #     if self.turn_right: 
+                #         self.robot_controller.set_move_cmd(0.0, -1.2)
+                #         self.robot_controller.publish()
+                #     else:
+                #         self.robot_controller.set_move_cmd(0.0, 1.2)
+                #         self.robot_controller.publish()
 
-                while self.robot_lidar.min_distance > 0.5:
-                    self.robot_controller.publish()
-                    self.distance = sqrt(pow(self.posx0 - self.robot_odometry.posx, 2) + pow(self.posy0 - self.robot_odometry.posy, 2))
-                
-                if self.robot_lidar.closest_object_position > 0 and self.robot_lidar.back_min > 0.3:
-                    self.robot_controller.set_move_cmd(0.0, -1.2)
-                    self.robot_controller.publish()
-                elif self.robot_lidar.closest_object_position < 0 and self.robot_lidar.back_min > 0.3:
-                    self.robot_controller.set_move_cmd(0.0, 1.2)
-                    self.robot_controller.publish()
-                elif self.robot_lidar.closest_object_position == 0:
-                    if self.turn_right: 
-                        self.robot_controller.set_move_cmd(0.0, -1.2)
+                if startZone == 'A':
+                    pass
+                if startZone == 'B':
+                    if self.distance < 0.4:
+                        self.robot_controller.set_move_cmd(0.25, 0)
                         self.robot_controller.publish()
+                    elif self.distance >= 0.4 and self.distance < 1.0: #1.87:
+                        if abs(self.theta_z0 - self.robot_odometry.yaw) >= 90 and abs(self.theta_z0 - self.robot_odometry.yaw) <= 270:
+                            self.robot_controller.set_move_cmd(0.25, 0)
+                            self.robot_controller.publish()
+                        else:
+                            self.robot_controller.set_move_cmd(0, 0.3)
+                            self.robot_controller.publish()
+                    elif self.distance >= 1.0 and self.distance < 2.5:
+                        if abs(self.theta_z0 - self.robot_odometry.yaw) >= 358:
+                            self.robot_controller.set_move_cmd(0.25, 0)
+                            self.robot_controller.publish()
+                        else:
+                            self.robot_controller.set_move_cmd(0, 0.3)
+                            self.robot_controller.publish()
                     else:
-                        self.robot_controller.set_move_cmd(0.0, 1.2)
+                        self.robot_controller.set_move_cmd(0.0, 0)
                         self.robot_controller.publish()
-                            
-                if findThis > 0 and self.distance > 1:
-                    print('TARGET DETECTED: Beaconing Initiated.')
-                    self.robot_controller.set_move_cmd(0, 0)
+                        
+                if startZone == 'C':
+                    if self.distance < 0.7:
+                        self.robot_controller.set_move_cmd(0.25, 0)
+                        self.robot_controller.publish()
+                    elif self.distance >= 0.7 and self.distance < 3.6: #1.87:
+                        if abs(self.theta_z0 - self.robot_odometry.yaw) >= 88:
+                            self.robot_controller.set_move_cmd(0.25, 0)
+                            self.robot_controller.publish()
+                        else:
+                            self.robot_controller.set_move_cmd(0, -0.3)
+                            self.robot_controller.publish()
+                    elif self.distance >= 3.6 and self.distance < 4:
+                        if abs(self.theta_z0 - self.robot_odometry.yaw) <= 5:
+                            self.robot_controller.set_move_cmd(0.25, 0)
+                            self.robot_controller.publish()
+                        else:
+                            self.robot_controller.set_move_cmd(0, 0.3)
+                            self.robot_controller.publish()
+                    elif self.distance >= 4 and self.distance < 5:
+                        if abs(self.theta_z0 - self.robot_odometry.yaw) >= 358:
+                            self.robot_controller.set_move_cmd(0.0, 0)
+                            self.robot_controller.publish()
+                        else:
+                            self.robot_controller.set_move_cmd(0, 0.3)
+                            self.robot_controller.publish()
+                    else:
+                        self.robot_controller.set_move_cmd(0.0, 0)
+                        self.robot_controller.publish()
+                print(findThis)
+                if findThis > 7000000 and self.distance >= 0.5:
+                    print(findThis)
+                    self.robot_controller.set_move_cmd(0.0, 0)
                     self.robot_controller.publish()
+                    print('TARGET DETECTED: Beaconing Initiated.')
+                    maskValue = findThis
+                    #beaconingInitiated = True
                     searching = False
-                    beaconingInitiated = True
                         
             # initiate beaconing
             while beaconingInitiated:
-                if self.robot_lidar.min_distance < 0.2:
-                    self.robot_controller.set_move_cmd(0.0, 0.0)
-                    self.robot_controller.publish()
-                    print("BEACONING COMPLETE: The robot has now stopped.")
-                    beaconingInitiated = False
-                self.robot_controller.set_move_cmd(0.1, 0)
+                # if self.robot_lidar.min_distance < 0.2:
+                #     self.robot_controller.set_move_cmd(0.0, 0.0)
+                #     self.robot_controller.publish()
+                #     print("BEACONING COMPLETE: The robot has now stopped.")
+                #     beaconingInitiated = False
+                # self.robot_controller.set_move_cmd(0.1, 0)
+                # self.robot_controller.publish()
+
+                # while sum of mask values less that total mask (meaning robot right in front), move towards beacon
+                # move in direction where mask value keeps increasing to get closer to beacon
+
+                maskValue = np.sum(beaconTarget)
+                #while findThis < beaconColor:
+                print('beaconing')
+                self.robot_controller.set_move_cmd(0.0, 0.0)
                 self.robot_controller.publish()
+        
 
             self.robot_controller.set_move_cmd(0.0, 0.0)
             self.robot_controller.publish()
