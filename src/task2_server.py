@@ -87,7 +87,7 @@ class SearchActionServer(object):
             self.vel_controller.publish()
             #check if there has been a request to cancel the action mid-way through:
             if self.actionserver.is_preempt_requested():
-                rospy.loginfo("Cancelling the camera sweep.")
+                rospy.loginfo("Cancelling...")
                 self.actionserver.set_preempted()
                 # stop the robot:
                 self.vel_controller.stop()  
