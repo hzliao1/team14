@@ -324,6 +324,7 @@ class colour_search(object):
                         self.robot_controller.set_move_cmd(0.0, 0)
                         self.robot_controller.publish()
                         
+                        
                 if startZone == 'C':
                     if self.distance < 0.7:
                         self.robot_controller.set_move_cmd(0.25, 0)

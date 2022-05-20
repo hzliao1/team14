@@ -77,6 +77,7 @@ def turnCCW():
     robot_controller.set_move_cmd(0, 0)  
     robot_controller.publish()
 
+
 def escapeMaze():
     #initialize the node   
     rospy.init_node('robot_maze', anonymous=True)
