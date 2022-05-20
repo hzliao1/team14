@@ -37,7 +37,7 @@ class SearchActionServer(object):
         cli.add_argument("-colour", metavar="COL", type=String, default="Blue", help="The name of a colour (for example)")
         self.args = cli.parse_args(rospy.myargv()[1:])
        
-        self.camera_subscriber = rospy.Subscriber("/camera/rgb/image_raw", Image, self.camera_callback)
+        self.camera_subscriber = rospy.Subscriber("/camera/color/image_raw", Image, self.camera_callback)
         self.actionserver = actionlib.SimpleActionServer("/search_action_server", 
             SearchAction, self.action_server_launcher, auto_start=False)
         
