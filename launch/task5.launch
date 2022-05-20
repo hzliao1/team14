@@ -1,4 +1,6 @@
 <launch>
-  <node pkg="team14" type="task5.py" name="pub_node"  output="screen">
-  </node>
+  <arg name="target_colour" default="Blue"/>
+  <node pkg="team14" type="task5_client.py" name="search_action_client"  output="screen"/>
+  
+  <node pkg="team14" type="task5_server.py" name="search_action_server"  output="screen" args="-colour $(arg target_colour)"/>
 </launch>
