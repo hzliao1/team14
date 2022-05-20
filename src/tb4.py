@@ -53,8 +53,8 @@ class Tb3LaserScan(object):
         right_arc = scan_data.ranges[-15:]
         front_arc = np.array(left_arc[::-1] + right_arc[::-1])
         
-        right = np.array(scan_data.ranges[-45:-91])
-        left = np.array(scan_data.ranges[46:91])
+        right = np.array(scan_data.ranges[-90:-44])
+        left = np.array(scan_data.ranges[45:91])
         back = np.array(scan_data.ranges[91:271])
 
         self.min_distance = front_arc.min()
@@ -66,10 +66,10 @@ class Tb3LaserScan(object):
         arc_angles = np.arange(-15, 16)
         self.closest_object_position = arc_angles[np.argmin(front_arc)]
 
-        right_angles = np.arange(-46, -91)
+        right_angles = np.arange(-90, -44)
         self.right_object_position = right_angles[np.argmin(right)]
 
-        left_angles = np.arange(46, 91)
+        left_angles = np.arange(45, 91)
         self.left_object_position = left_angles[np.argmin(left)]
 
         back_angles = np.arange(91, 271)
