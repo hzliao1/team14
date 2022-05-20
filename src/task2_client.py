@@ -63,7 +63,7 @@ class action_client(object):
             self.action_complete = True
             print(f"RESULT: Action State = {self.client.get_state()}")
             if prempt:
-                print("RESULT: Action preempted after travelling 2 meters")
+                print("RESULT: Action preempted after travelling 5 meters")
             else:
                 result = self.client.get_result()
                 print(f"RESULT: closest object {result.closest_object_distance:.3f} m away "

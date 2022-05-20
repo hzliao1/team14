@@ -87,7 +87,7 @@ class SearchActionServer(object):
             self.vel_controller.publish()
             #check if there has been a request to cancel the action mid-way through:
             if self.actionserver.is_preempt_requested():
-                rospy.loginfo("Cancelling the camera sweep.")
+                rospy.loginfo("Cancelling...")
                 self.actionserver.set_preempted()
                 # stop the robot:
                 self.vel_controller.stop()  
@@ -102,17 +102,17 @@ class SearchActionServer(object):
 
 
         if self.tb3_lidar.closest_object_position > 0 and self.tb3_lidar.back_min > 0.3 and self.turn_right:
-            self.vel_controller.set_move_cmd(0.0, -1.2)
+            self.vel_controller.set_move_cmd(0.0, -1.3)
             self.vel_controller.publish()
         elif self.tb3_lidar.closest_object_position < 0 and self.tb3_lidar.back_min > 0.3 and self.turn_left:
-            self.vel_controller.set_move_cmd(0.0, 1.2)
+            self.vel_controller.set_move_cmd(0.0, 1.3)
             self.vel_controller.publish()
         elif self.tb3_lidar.closest_object_position == 0:
-            if self.turn_right: 
-                self.vel_controller.set_move_cmd(0.0, -1.2)
+            if self.turn_right and self.tb3_lidar.back_min > 0.3: 
+                self.vel_controller.set_move_cmd(0.0, -1.3)
                 self.vel_controller.publish()
             else:
-                self.vel_controller.set_move_cmd(0.0, 1.2)
+                self.vel_controller.set_move_cmd(0.0, 1.3)
                 self.vel_controller.publish()  
 
 
