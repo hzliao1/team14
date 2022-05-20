@@ -139,7 +139,7 @@ class colour_search(object):
         # if self.m00 > self.m00_min:
         #     cv2.circle(crop_img, (int(self.cy), 200), 10, (0, 0, 255), 2)
         
-        cv2.imshow("cropped image", crop_img)
+        # cv2.imshow("cropped image", crop_img)
         cv2.waitKey(1)
 
     def odom_callback(self, odom_data):
@@ -193,22 +193,18 @@ class colour_search(object):
                 time.sleep(0.5)
                 initialPosition = self.robot_odometry.posx
                 initialYaw = self.robot_odometry.yaw
-                print(initialPosition)
-                if initialPosition > -1 and initialPosition < 1:
+                if initialPosition > -3 and initialPosition < -2:
                     startZone = 'A'
-                    print(startZone)
                     detectingColor = True
                     findPosition = False
                     break
                 if initialPosition > -2 and initialPosition < -1:
                     startZone = 'B'
-                    print(startZone)
                     detectingColor = True
                     findPosition = False
                     break
                 if initialPosition > 1 and initialPosition < 3:
                     startZone = 'C'
-                    print(startZone)
                     detectingColor = True
                     findPosition = False
                     break
@@ -262,7 +258,7 @@ class colour_search(object):
             self.posx0 = self.robot_odometry.posx
             self.posy0 = self.robot_odometry.posy
             self.theta_z0 = self.robot_odometry.yaw
-            
+ 
             # search for beacon of colour 'searchColour'
             while searching:
                 if searchColour == 'Blue':
@@ -301,12 +297,45 @@ class colour_search(object):
                 #         self.robot_controller.publish()
 
                 if startZone == 'A':
-                    pass
+                    if self.distance < 0.4:
+                        self.robot_controller.set_move_cmd(0.25, 0)
+                        self.robot_controller.publish()
+                    elif self.distance >= 0.4 and self.distance < 1:
+                        if abs(self.theta_z0 - self.robot_odometry.yaw) >= 90 and abs(self.theta_z0 - self.robot_odometry.yaw) <= 270:
+                            self.robot_controller.set_move_cmd(0.25, 0)
+                            self.robot_controller.publish()
+                        else:
+                            self.robot_controller.set_move_cmd(0, -0.3)
+                            self.robot_controller.publish()
+                    elif self.distance >= 1 and self.distance < 2:
+                        if abs(self.theta_z0 - self.robot_odometry.yaw) >= 0 and abs(self.theta_z0 - self.robot_odometry.yaw) <= 5:
+                            self.robot_controller.set_move_cmd(0.25, 0)
+                            self.robot_controller.publish()
+                        else:
+                            self.robot_controller.set_move_cmd(0, 0.3)
+                            self.robot_controller.publish()
+                    elif self.distance >= 2 and self.distance < 2.8:
+                        if abs(self.theta_z0 - self.robot_odometry.yaw) >= 15:
+                            self.robot_controller.set_move_cmd(0.25, 0)
+                            self.robot_controller.publish()
+                        else:
+                            self.robot_controller.set_move_cmd(0, 0.3)
+                            self.robot_controller.publish()
+                    elif self.distance >= 2.8 and self.distance < 5:
+                        if abs(self.theta_z0 - self.robot_odometry.yaw) >= 358:
+                            self.robot_controller.set_move_cmd(0.0, 0)
+                            self.robot_controller.publish()
+                        else:
+                            self.robot_controller.set_move_cmd(0, -0.3)
+                            self.robot_controller.publish()
+                    else:
+                        self.robot_controller.set_move_cmd(0.0, 0)
+                        self.robot_controller.publish()
                 if startZone == 'B':
                     if self.distance < 0.4:
                         self.robot_controller.set_move_cmd(0.25, 0)
                         self.robot_controller.publish()
-                    elif self.distance >= 0.4 and self.distance < 1.0: #1.87:
+                    elif self.distance >= 0.4 and self.distance < 1.0:
                         if abs(self.theta_z0 - self.robot_odometry.yaw) >= 90 and abs(self.theta_z0 - self.robot_odometry.yaw) <= 270:
                             self.robot_controller.set_move_cmd(0.25, 0)
                             self.robot_controller.publish()
@@ -315,21 +344,22 @@ class colour_search(object):
                             self.robot_controller.publish()
                     elif self.distance >= 1.0 and self.distance < 2.5:
                         if abs(self.theta_z0 - self.robot_odometry.yaw) >= 358:
-                            self.robot_controller.set_move_cmd(0.25, 0)
+                            print('in rotate move')
+                            self.robot_controller.set_move_cmd(0.0, 0)
                             self.robot_controller.publish()
                         else:
                             self.robot_controller.set_move_cmd(0, 0.3)
                             self.robot_controller.publish()
                     else:
                         self.robot_controller.set_move_cmd(0.0, 0)
-                        self.robot_controller.publish()
-                        
+                        self.robot_controller.publish()     
                         
                 if startZone == 'C':
+                    print(abs(self.theta_z0 - self.robot_odometry.yaw))
                     if self.distance < 0.7:
                         self.robot_controller.set_move_cmd(0.25, 0)
                         self.robot_controller.publish()
-                    elif self.distance >= 0.7 and self.distance < 3.6: #1.87:
+                    elif self.distance >= 0.7 and self.distance < 3.6:
                         if abs(self.theta_z0 - self.robot_odometry.yaw) >= 88:
                             self.robot_controller.set_move_cmd(0.25, 0)
                             self.robot_controller.publish()
@@ -353,15 +383,16 @@ class colour_search(object):
                     else:
                         self.robot_controller.set_move_cmd(0.0, 0)
                         self.robot_controller.publish()
-                print(findThis)
-                if findThis > 7000000 and self.distance >= 0.5:
+
+                if findThis > 5300000 and self.distance >= 0.5:
                     print(findThis)
-                    self.robot_controller.set_move_cmd(0.0, 0)
+                    self.robot_controller.set_move_cmd(0.0, 0.0)
                     self.robot_controller.publish()
                     print('TARGET DETECTED: Beaconing Initiated.')
                     maskValue = findThis
-                    #beaconingInitiated = True
+                    beaconingInitiated = True
                     searching = False
+                    break
                         
             # initiate beaconing
             while beaconingInitiated:
